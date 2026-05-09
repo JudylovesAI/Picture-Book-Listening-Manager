@@ -10,5 +10,14 @@
       "createdAt": "2026-05-09T09:31:40.385Z"
     }
   ],
-  "sessions": []
+  "sessions": [
+    {
+      "id": "session_1778319266328",
+      "bookId": "book_1778319100385_byyy9qhqx",
+      "date": "2026-05-09",
+      "duration": 2.1695833333333336,
+      "scheduleIndex": 0,
+      "createdAt": "2026-05-09T09:34:26.328Z"
+    }
+  ]
 }
