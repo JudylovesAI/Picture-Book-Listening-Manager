@@ -10,13 +10,13 @@
       "createdAt": "2026-05-09T09:31:40.385Z"
     },
     {
-      "id": "book_1778319354801_o8cira57y",
-      "name": "2. Lights-大猫-三级1",
+      "id": "book_1778319571149_xmwwdbzck",
+      "name": "10. Rebecca at the Funfair-大猫 三级2",
       "genre": "",
       "theme": "",
       "lexile": "L2",
       "learnDate": "2026-05-09",
-      "createdAt": "2026-05-09T09:35:54.801Z"
+      "createdAt": "2026-05-09T09:39:31.149Z"
     }
   ],
   "sessions": [
@@ -27,14 +27,6 @@
       "duration": 2.1695833333333336,
       "scheduleIndex": 0,
       "createdAt": "2026-05-09T09:34:26.328Z"
-    },
-    {
-      "id": "session_1778319514836",
-      "bookId": "book_1778319354801_o8cira57y",
-      "date": "2026-05-09",
-      "duration": 2.0031166666666667,
-      "scheduleIndex": 0,
-      "createdAt": "2026-05-09T09:38:34.836Z"
     }
   ]
 }
