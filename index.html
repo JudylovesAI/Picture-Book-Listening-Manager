@@ -1,0 +1,2545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绘本熏听管家</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-color: #FFF8E7;
+            --card-bg: #FFFFFF;
+            --primary: #4CAF50;
+            --primary-light: #81C784;
+            --accent: #FF9800;
+            --accent-light: #FFB74D;
+            --info: #42A5F5;
+            --text: #5D4037;
+            --text-light: #8D6E63;
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --radius: 16px;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .header .date {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        /* Pages */
+        .page {
+            display: none;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Tags */
+        .tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .tag-new {
+            background: #E8F5E9;
+            color: var(--primary);
+        }
+        
+        .tag-review {
+            background: #FFF3E0;
+            color: var(--accent);
+        }
+        
+        .tag-done {
+            background: #E3F2FD;
+            color: var(--info);
+        }
+        
+        .tag-fiction {
+            background: #F3E5F5;
+            color: #9C27B0;
+        }
+        
+        .tag-nonfiction {
+            background: #E8F4FC;
+            color: #1976D2;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: white;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+        
+        .btn-large {
+            padding: 20px 40px;
+            font-size: 1.3rem;
+            border-radius: 30px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--text-light);
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item .icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+        
+        /* Player */
+        .player-bar {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 12px 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            z-index: 99;
+        }
+        
+        .player-bar.show {
+            display: flex;
+        }
+        
+        .player-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .player-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .player-time {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .player-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            color: var(--primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        
+        .player-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .player-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: var(--accent);
+            transition: width 0.1s linear;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .file-upload {
+            border: 2px dashed var(--primary);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #F1F8E9;
+        }
+        
+        .file-upload:hover {
+            border-color: var(--accent);
+            background: #FFF8E1;
+        }
+        
+        .file-upload .icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        .file-upload input {
+            display: none;
+        }
+        
+        .file-name {
+            color: var(--primary);
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .file-list {
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #F5F5F5;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .file-item .remove {
+            cursor: pointer;
+            color: #F44336;
+            font-weight: bold;
+        }
+        
+        /* List Items */
+        .book-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .book-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .book-item.playing {
+            border: 2px solid var(--primary);
+            background: #E8F5E9;
+        }
+        
+        .book-item.done {
+            opacity: 0.6;
+        }
+        
+        .book-cover {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-light), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .book-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .book-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .book-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        
+        .book-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: #F5F5F5;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .action-btn:hover {
+            background: #E0E0E0;
+        }
+        
+        .action-btn.delete:hover {
+            background: #FFEBEE;
+            color: #F44336;
+        }
+        
+        /* Filter Pills */
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        
+        .filter-pill {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid #E0E0E0;
+            background: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .filter-pill.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        
+        /* Search Box */
+        .search-box {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            border: 2px solid #E0E0E0;
+            border-radius: 25px;
+            font-size: 1rem;
+            background: white;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .search-box .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--text-light);
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        
+        .stat-card.accent .stat-value {
+            color: var(--accent);
+        }
+        
+        .stat-card.info .stat-value {
+            color: var(--info);
+        }
+        
+        /* Charts */
+        .chart-container {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .chart-title {
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Rank List */
+        .rank-list {
+            list-style: none;
+        }
+        
+        .rank-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #F0F0F0;
+        }
+        
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+        
+        .rank-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 12px;
+        }
+        
+        .rank-num.gold {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+        }
+        
+        .rank-num.silver {
+            background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+        }
+        
+        .rank-num.bronze {
+            background: linear-gradient(135deg, #CD7F32, #A0522D);
+        }
+        
+        .rank-info {
+            flex: 1;
+        }
+        
+        .rank-name {
+            font-weight: 600;
+        }
+        
+        .rank-time {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+        
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+        
+        /* Celebration */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .celebration.show {
+            display: flex;
+        }
+        
+        .celebration-content {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            animation: popIn 0.5s ease;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .celebration .stars {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .celebration h2 {
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        /* Progress Ring */
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            margin: 20px auto;
+        }
+        
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 10;
+        }
+        
+        .progress-ring .bg {
+            stroke: #E0E0E0;
+        }
+        
+        .progress-ring .progress {
+            stroke: var(--primary);
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 0.5s;
+        }
+        
+        /* Star Animation */
+        .star {
+            position: fixed;
+            font-size: 2rem;
+            animation: fall 2s ease-out forwards;
+            pointer-events: none;
+            z-index: 1001;
+        }
+        
+        @keyframes fall {
+            0% { 
+                opacity: 1;
+                transform: translateY(0) rotate(0deg);
+            }
+            100% { 
+                opacity: 0;
+                transform: translateY(100vh) rotate(720deg);
+            }
+        }
+        
+        /* Lexile Badge */
+        .lexile-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: linear-gradient(135deg, #42A5F5, #64B5F6);
+            color: white;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        /* Schedule Info */
+        .schedule-info {
+            background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .schedule-icon {
+            font-size: 2.5rem;
+        }
+        
+        .schedule-text h3 {
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        
+        .schedule-text p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 20px;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h3 {
+            font-size: 1.2rem;
+        }
+        
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: #F5F5F5;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        
+        /* Theme Icons */
+        .theme-icon { font-size: 1.2rem; }
+        
+        /* Section Title */
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            margin: 16px 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Hidden file input */
+        #audioFiles {
+            display: none;
+        }
+        
+        /* Lexile Level Grid */
+        .lexile-levels {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+        
+        .lexile-option {
+            padding: 10px 4px;
+            border: 2px solid #E0E0E0;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+        
+        .lexile-option:hover {
+            border-color: var(--primary);
+        }
+        
+        .lexile-option.selected {
+            border-color: var(--primary);
+            background: #E8F5E9;
+        }
+        
+        .lexile-option .level {
+            font-weight: 600;
+            color: var(--info);
+            font-size: 0.9rem;
+        }
+        
+        .lexile-option .desc {
+            font-size: 0.65rem;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+        
+        /* Auto Listen Mode (Today Page) */
+        .auto-listen-container {
+            text-align: center;
+            padding: 30px 20px;
+        }
+        
+        .auto-listen-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .auto-listen-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+        
+        .auto-listen-desc {
+            color: var(--text-light);
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+        
+        .book-list-preview {
+            text-align: left;
+            background: #F9F9F9;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .book-list-preview h4 {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+        
+        .preview-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #EEE;
+            font-size: 0.9rem;
+        }
+        
+        .preview-item:last-child {
+            border-bottom: none;
+        }
+        
+        .preview-item .num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .preview-item.done .num {
+            background: var(--accent);
+        }
+        
+        .preview-item.playing-now {
+            background: #E8F5E9;
+            margin: 0 -16px;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        
+        /* Playing State */
+        .playing-state {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .playing-cover {
+            font-size: 6rem;
+            margin-bottom: 16px;
+            animation: playingPulse 1s infinite;
+        }
+        
+        @keyframes playingPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+        
+        .playing-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .playing-status {
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+        
+        .playing-progress {
+            width: 80%;
+            max-width: 300px;
+            margin: 0 auto 20px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #E0E0E0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.1s linear;
+        }
+        
+        .progress-time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 8px;
+        }
+        
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-btn.play {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+        
+        .control-btn.pause {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: white;
+        }
+        
+        .control-btn.stop {
+            background: #F5F5F5;
+            color: var(--text-light);
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        /* Filter Group */
+        .filter-group {
+            margin-bottom: 16px;
+        }
+        
+        .filter-group-label {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* PWA standalone mode - add safe area padding for iPhone */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .bottom-nav {
+                padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            }
+            body {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
+            }
+        }
+        
+        /* Prevent text selection on buttons for better touch experience */
+        button, .nav-item, .action-btn, .control-btn, .btn {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        
+        /* Smooth scrolling */
+        html {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+    </style>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="熏听管家">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>📚 绘本熏听管家</h1>
+        <div class="date" id="currentDate"></div>
+    </header>
+
+    <!-- Page: Today -->
+    <div class="page active" id="pageToday">
+        <!-- Auto Listen Mode -->
+        <div id="autoListenMode">
+            <div class="auto-listen-container" id="autoListenReady">
+                <div class="auto-listen-icon">🎧</div>
+                <div class="auto-listen-title">今日熏听计划</div>
+                <div class="auto-listen-desc" id="autoListenSummary">加载中...</div>
+                <div class="book-list-preview" id="bookListPreview"></div>
+                <button class="btn btn-primary btn-large" id="startAutoListenBtn" onclick="startAutoListen()">
+                    ▶ 开始熏听
+                </button>
+            </div>
+            
+            <div class="auto-listen-container" id="autoListenPlaying" style="display:none;">
+                <div class="playing-cover" id="playingCover">📖</div>
+                <div class="playing-title" id="playingTitle">绘本名称</div>
+                <div class="playing-status" id="playingStatus">正在播放...</div>
+                <div class="playing-progress">
+                    <div class="progress-bar">
+                        <div class="fill" id="playingFill" style="width:0%"></div>
+                    </div>
+                    <div class="progress-time">
+                        <span id="playingCurrentTime">0:00</span>
+                        <span id="playingDuration">0:00</span>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <button class="control-btn stop" onclick="stopAutoListen()">⏹</button>
+                    <button class="control-btn pause" id="autoPlayBtn" onclick="toggleAutoPlay()">⏸</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="emptyToday" class="empty-state" style="display:none;">
+            <div class="icon">🎉</div>
+            <h3>太棒了！</h3>
+            <p>今日熏听已完成，快去添加新绘本吧~</p>
+            <button class="btn btn-primary" onclick="switchTab('add')" style="margin-top:20px;">
+                ➕ 添加新绘本
+            </button>
+        </div>
+        
+        <!-- Statistics Section -->
+        <div class="section-title" style="margin-top:30px;">📊 熏听统计</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statToday">0</div>
+                <div class="stat-label">今日时长(分钟)</div>
+            </div>
+            <div class="stat-card accent">
+                <div class="stat-value" id="statWeek">0</div>
+                <div class="stat-label">本周时长(分钟)</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">累计时长(分钟)</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">📈 本周熏听时长</div>
+            <canvas id="weekChart" width="340" height="180"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">🥧 虚构vs非虚构配比</div>
+            <canvas id="genreChart" width="340" height="200"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-title">🏆 听得最多的主题 TOP3</div>
+            <ul class="rank-list" id="themeRank"></ul>
+        </div>
+    </div>
+
+    <!-- Page: Library -->
+    <div class="page" id="pageLibrary">
+        <!-- Search Box -->
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="搜索绘本名称..." oninput="handleSearch()">
+        </div>
+        
+        <!-- Genre Filter -->
+        <div class="filter-group">
+            <div class="filter-group-label">📚 体裁</div>
+            <div class="filter-pills" id="genreFilters"></div>
+        </div>
+        
+        <!-- Theme Filter -->
+        <div class="filter-group">
+            <div class="filter-group-label">🏷️ 主题</div>
+            <div class="filter-pills" id="themeFilters"></div>
+        </div>
+        
+        <!-- Lexile Filter -->
+        <div class="filter-group">
+            <div class="filter-group-label">📏 难度</div>
+            <div class="filter-pills" id="lexileFilters"></div>
+        </div>
+        
+        <div id="libraryList"></div>
+        
+        <div id="emptyLibrary" class="empty-state" style="display:none;">
+            <div class="icon">📚</div>
+            <h3>绘本书库空空的</h3>
+            <p>快去添加第一本绘本吧！</p>
+        </div>
+    </div>
+
+    <!-- Page: Add Book -->
+    <div class="page" id="pageAdd">
+        <div class="card">
+            <div class="card-title">🎵 批量上传音频</div>
+            <div class="file-upload" id="fileUpload" onclick="document.getElementById('audioFiles').click()">
+                <div class="icon">🎧</div>
+                <p>点击上传MP3音频文件（最多50个）</p>
+                <input type="file" id="audioFiles" accept="audio/mp3,audio/mpeg" multiple onchange="handleFileSelect(event)">
+            </div>
+            <div id="fileList" class="file-list" style="display:none;"></div>
+        </div>
+        
+        <div class="card">
+            <div class="form-group">
+                <label class="form-label">📏 难度分级 <span style="color:#F44336">*</span></label>
+                <div class="lexile-levels">
+                    <div class="lexile-option" data-level="预备级" onclick="selectLexile(this)">
+                        <div class="level">🌟</div>
+                        <div class="desc">语感启蒙</div>
+                    </div>
+                    <div class="lexile-option selected" data-level="L1" onclick="selectLexile(this)">
+                        <div class="level">L1</div>
+                        <div class="desc">小学毕业</div>
+                    </div>
+                    <div class="lexile-option" data-level="L2" onclick="selectLexile(this)">
+                        <div class="level">L2</div>
+                        <div class="desc">剑少2级</div>
+                    </div>
+                    <div class="lexile-option" data-level="L3" onclick="selectLexile(this)">
+                        <div class="level">L3</div>
+                        <div class="desc">KET水平</div>
+                    </div>
+                    <div class="lexile-option" data-level="L4" onclick="selectLexile(this)">
+                        <div class="level">L4</div>
+                        <div class="desc">PET水平</div>
+                    </div>
+                </div>
+                <input type="hidden" id="bookLexile" value="L1">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">📚 体裁 <span style="color:#999">(可选)</span></label>
+                <select class="form-select" id="bookGenre">
+                    <option value="">-- 不选择 --</option>
+                    <option value="虚构">📕 虚构 Fiction</option>
+                    <option value="非虚构">📗 非虚构 NonFiction</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">🏷️ 主题分类 <span style="color:#999">(可选)</span></label>
+                <select class="form-select" id="bookTheme">
+                    <option value="">-- 不选择 --</option>
+                    <optgroup label="🌟 人与自我">
+                        <option value="生活与学习">生活与学习</option>
+                        <option value="做人与做事">做人与做事</option>
+                    </optgroup>
+                    <optgroup label="🏛️ 人与社会">
+                        <option value="社会服务">社会服务</option>
+                        <option value="人际沟通">人际沟通</option>
+                        <option value="文学">文学</option>
+                        <option value="艺术">艺术</option>
+                        <option value="体育">体育</option>
+                        <option value="历史">历史</option>
+                        <option value="社会与文化">社会与文化</option>
+                        <option value="科学与技术">科学与技术</option>
+                    </optgroup>
+                    <optgroup label="🌍 人与自然">
+                        <option value="自然生态">自然生态</option>
+                        <option value="环境保护">环境保护</option>
+                        <option value="灾害防范">灾害防范</option>
+                        <option value="宇宙探索">宇宙探索</option>
+                    </optgroup>
+                </select>
+            </div>
+            
+            <button class="btn btn-primary" style="width:100%;" onclick="addBooks()">
+                ✅ 批量添加绘本
+            </button>
+        </div>
+    </div>
+
+    <!-- Player Bar -->
+    <div class="player-bar" id="playerBar">
+        <div class="player-progress" id="playerProgress"></div>
+        <div class="book-cover" id="playerCover">📖</div>
+        <div class="player-info">
+            <div class="player-title" id="playerTitle">绘本名称</div>
+            <div class="player-time">
+                <span id="playerCurrent">0:00</span> / <span id="playerDuration">0:00</span>
+            </div>
+        </div>
+        <button class="player-btn" id="playerBtn" onclick="togglePlay()">▶</button>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('today')">
+            <span class="icon">🏠</span>
+            <span>今日熏听</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('library')">
+            <span class="icon">📚</span>
+            <span>绘本库</span>
+        </button>
+        <button class="nav-item" onclick="switchTab('add')">
+            <span class="icon">➕</span>
+            <span>添加绘本</span>
+        </button>
+    </nav>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ 编辑绘本</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">📖 绘本名称</label>
+                <input type="text" class="form-input" id="editName">
+            </div>
+            <div class="form-group">
+                <label class="form-label">📚 体裁</label>
+                <select class="form-select" id="editGenre">
+                    <option value="">-- 不选择 --</option>
+                    <option value="虚构">📕 虚构 Fiction</option>
+                    <option value="非虚构">📗 非虚构 NonFiction</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">🏷️ 主题分类</label>
+                <select class="form-select" id="editTheme">
+                    <option value="">-- 不选择 --</option>
+                    <optgroup label="🌟 人与自我">
+                        <option value="生活与学习">生活与学习</option>
+                        <option value="做人与做事">做人与做事</option>
+                    </optgroup>
+                    <optgroup label="🏛️ 人与社会">
+                        <option value="社会服务">社会服务</option>
+                        <option value="人际沟通">人际沟通</option>
+                        <option value="文学">文学</option>
+                        <option value="艺术">艺术</option>
+                        <option value="体育">体育</option>
+                        <option value="历史">历史</option>
+                        <option value="社会与文化">社会与文化</option>
+                        <option value="科学与技术">科学与技术</option>
+                    </optgroup>
+                    <optgroup label="🌍 人与自然">
+                        <option value="自然生态">自然生态</option>
+                        <option value="环境保护">环境保护</option>
+                        <option value="灾害防范">灾害防范</option>
+                        <option value="宇宙探索">宇宙探索</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">📏 难度</label>
+                <select class="form-select" id="editLexile">
+                    <option value="预备级">🌟 预备级（语感启蒙）</option>
+                    <option value="L1">L1（小学毕业）</option>
+                    <option value="L2">L2（剑少2级）</option>
+                    <option value="L3">L3（KET水平）</option>
+                    <option value="L4">L4（PET水平）</option>
+                </select>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button class="btn btn-outline" style="flex:1;" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="saveEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Celebration -->
+    <div class="celebration" id="celebration">
+        <div class="celebration-content">
+            <div class="stars">⭐🌟⭐🌟⭐</div>
+            <h2>太棒了！🎉</h2>
+            <p>今日熏听全部完成！</p>
+            <p style="color:var(--text-light);margin-top:8px;">你真是个爱学习的好孩子~</p>
+            <button class="btn btn-primary" style="margin-top:20px;" onclick="closeCelebration()">
+                太开心啦！✨
+            </button>
+        </div>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        // Data Storage
+        const STORAGE_KEY = 'pictureBookApp_v2';
+        const DB_NAME = 'PictureBookDB';
+        const DB_STORE = 'audioStore';
+        
+        // IndexedDB Functions
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(DB_STORE)) {
+                        db.createObjectStore(DB_STORE, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+        
+        function saveAudioToDB(bookId, audioData) {
+            return openDB().then(db => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(DB_STORE, 'readwrite');
+                    tx.objectStore(DB_STORE).put({ id: bookId, data: audioData });
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = (e) => reject(e.target.error);
+                });
+            });
+        }
+        
+        function getAudioFromDB(bookId) {
+            return openDB().then(db => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(DB_STORE, 'readonly');
+                    const req = tx.objectStore(DB_STORE).get(bookId);
+                    req.onsuccess = () => resolve(req.result?.data || null);
+                    req.onerror = (e) => reject(e.target.error);
+                });
+            });
+        }
+        
+        function deleteAudioFromDB(bookId) {
+            return openDB().then(db => {
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(DB_STORE, 'readwrite');
+                    tx.objectStore(DB_STORE).delete(bookId);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = (e) => reject(e.target.error);
+                });
+            });
+        }
+        
+        // Theme icons mapping (按照课标主题)
+        const themeIcons = {
+            '生活与学习': '🎒', '做人与做事': '💪',
+            '社会服务': '🤝', '人际沟通': '💬', '文学': '📚', 
+            '艺术': '🎨', '体育': '⚽', '历史': '🏛️',
+            '社会与文化': '🌍', '科学与技术': '🔬',
+            '自然生态': '🌿', '环境保护': '🌱', '灾害防范': '🛡️', '宇宙探索': '🚀'
+        };
+        
+        // Genre icons
+        const genreIcons = {
+            '虚构': '📕', '非虚构': '📗'
+        };
+        
+        // Lexile labels
+        const lexileLabels = {
+            '预备级': '🌟预备级', 'L1': 'L1', 'L2': 'L2', 'L3': 'L3', 'L4': 'L4'
+        };
+        
+        const lexileDesc = {
+            '预备级': '语感启蒙', 'L1': '小学毕业', 'L2': '剑少2级', 'L3': 'KET水平', 'L4': 'PET水平'
+        };
+        
+        // All themes for filters
+        const allThemes = [
+            '生活与学习', '做人与做事',
+            '社会服务', '人际沟通', '文学', '艺术', '体育', '历史', '社会与文化', '科学与技术',
+            '自然生态', '环境保护', '灾害防范', '宇宙探索'
+        ];
+        
+        // Ebbinghaus schedule (days after first learning)
+        const SCHEDULE = [0, 1, 2, 4, 7, 15];
+        
+        // State
+        let books = [];
+        let sessions = [];
+        let currentBook = null;
+        let isPlaying = false;
+        let playStartTime = null;
+        let editBookId = null;
+        let currentFilter = { genre: 'all', theme: 'all', lexile: 'all' };
+        let searchKeyword = '';
+        let selectedAudioFiles = []; // [{name, data}]
+        
+        // Auto listen state
+        let autoListenQueue = [];
+        let autoListenIndex = 0;
+        let autoListenPlaying = false;
+        
+        // Load data from localStorage and IndexedDB
+        async function loadData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                const parsed = JSON.parse(data);
+                books = parsed.books || [];
+                sessions = parsed.sessions || [];
+                
+                // Remove audioData from books (now stored in IndexedDB)
+                // Restore audio URLs from IndexedDB
+                for (const book of books) {
+                    if (!book.audioUrl && book.id) {
+                        try {
+                            const audioData = await getAudioFromDB(book.id);
+                            if (audioData) {
+                                book.audioUrl = audioData;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to load audio for book:', book.id, e);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Save data to localStorage (audio data is stored in IndexedDB)
+        function saveData() {
+            try {
+                const data = {
+                    books: books.map(b => {
+                        const { audioUrl, ...rest } = b; // Don't store audioUrl in localStorage
+                        return rest;
+                    }),
+                    sessions: sessions
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    alert('存储空间不足！请删除一些绘本后重试。\n\n提示：音频文件较大，建议单个文件不超过10MB。');
+                } else {
+                    alert('保存数据失败：' + e.message);
+                }
+                console.error('Save error:', e);
+            }
+        }
+        
+        // Async save with IndexedDB support
+        async function saveDataWithAudio(book) {
+            try {
+                // Save audio to IndexedDB
+                if (book.audioUrl) {
+                    await saveAudioToDB(book.id, book.audioUrl);
+                }
+                // Save metadata to localStorage
+                saveData();
+                return true;
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    alert('存储空间不足！请删除一些绘本后重试。\n\n提示：音频文件较大，建议单个文件不超过10MB。');
+                } else {
+                    alert('保存失败：' + e.message);
+                }
+                console.error('Save error:', e);
+                return false;
+            }
+        }
+        
+        // Get today's date string
+        function getTodayString() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        // Get date string N days ago
+        function getDateString(daysAgo) {
+            const date = new Date();
+            date.setDate(date.getDate() - daysAgo);
+            return date.toISOString().split('T')[0];
+        }
+        
+        // Calculate schedule dates for a book
+        function getScheduleDates(book) {
+            const learnDate = new Date(book.learnDate);
+            return SCHEDULE.map(day => {
+                const date = new Date(learnDate);
+                date.setDate(date.getDate() + day);
+                return date.toISOString().split('T')[0];
+            });
+        }
+        
+        // Get today's learning items
+        function getTodayItems() {
+            const today = getTodayString();
+            const items = [];
+            
+            books.forEach(book => {
+                if (!book.audioUrl) return;
+                
+                const scheduleDates = getScheduleDates(book);
+                const sessionRecords = sessions.filter(s => s.bookId === book.id);
+                
+                scheduleDates.forEach((date, index) => {
+                    if (date === today) {
+                        const isNew = index === 0;
+                        const session = sessionRecords.find(s => s.date === today && s.scheduleIndex === index);
+                        
+                        items.push({
+                            book: book,
+                            scheduleIndex: index,
+                            isNew: isNew,
+                            isDone: !!session,
+                            sessionId: session?.id
+                        });
+                    }
+                });
+            });
+            
+            return items;
+        }
+        
+        // Update auto listen UI
+        function updateAutoListenUI() {
+            const items = getTodayItems();
+            const readyEl = document.getElementById('autoListenReady');
+            const emptyEl = document.getElementById('emptyToday');
+            const summaryEl = document.getElementById('autoListenSummary');
+            const previewEl = document.getElementById('bookListPreview');
+            const btnEl = document.getElementById('startAutoListenBtn');
+            
+            // Filter out already done items
+            const pendingItems = items.filter(i => !i.isDone);
+            
+            if (items.length === 0) {
+                readyEl.style.display = 'none';
+                emptyEl.style.display = 'block';
+                return;
+            }
+            
+            emptyEl.style.display = 'none';
+            readyEl.style.display = 'block';
+            
+            const done = items.filter(i => i.isDone).length;
+            const total = items.length;
+            summaryEl.textContent = `共${total}本，待听${pendingItems.length}本`;
+            
+            // Build preview list
+            let previewHtml = '<h4>📋 今日待听清单</h4>';
+            items.forEach((item, idx) => {
+                const book = item.book;
+                const doneClass = item.isDone ? 'done' : '';
+                const icon = themeIcons[book.theme] || '📖';
+                previewHtml += `
+                    <div class="preview-item ${doneClass}">
+                        <span class="num">${idx + 1}</span>
+                        <span>${icon} ${book.name}</span>
+                        ${item.isDone ? '<span style="color:#4CAF50">✓</span>' : ''}
+                    </div>
+                `;
+            });
+            previewEl.innerHTML = previewHtml;
+            
+            // Hide button if all done
+            btnEl.style.display = pendingItems.length > 0 ? 'inline-flex' : 'none';
+        }
+        
+        // Start auto listen
+        function startAutoListen() {
+            const items = getTodayItems().filter(i => !i.isDone);
+            if (items.length === 0) return;
+            
+            autoListenQueue = items.map(i => ({
+                bookId: i.book.id,
+                scheduleIndex: i.scheduleIndex
+            }));
+            autoListenIndex = 0;
+            
+            document.getElementById('autoListenReady').style.display = 'none';
+            document.getElementById('autoListenPlaying').style.display = 'block';
+            
+            playNextInQueue();
+        }
+        
+        // Play next in queue
+        function playNextInQueue() {
+            if (autoListenIndex >= autoListenQueue.length) {
+                // All done!
+                showCelebration();
+                stopAutoListen();
+                return;
+            }
+            
+            const queueItem = autoListenQueue[autoListenIndex];
+            const book = books.find(b => b.id === queueItem.bookId);
+            
+            if (!book || !book.audioUrl) {
+                autoListenIndex++;
+                playNextInQueue();
+                return;
+            }
+            
+            currentBook = book;
+            const player = document.getElementById('audioPlayer');
+            
+            player.src = book.audioUrl;
+            player.play();
+            isPlaying = true;
+            autoListenPlaying = true;
+            playStartTime = Date.now();
+            
+            // Update UI
+            document.getElementById('playingCover').textContent = themeIcons[book.theme] || '📖';
+            document.getElementById('playingTitle').textContent = book.name;
+            document.getElementById('playingStatus').textContent = `正在播放 ${autoListenIndex + 1}/${autoListenQueue.length}`;
+            document.getElementById('autoPlayBtn').textContent = '⏸';
+            
+            updatePlayerBarForAutoListen();
+        }
+        
+        // Update player bar for auto listen
+        function updatePlayerBarForAutoListen() {
+            const playerBar = document.getElementById('playerBar');
+            if (currentBook) {
+                playerBar.classList.add('show');
+                document.getElementById('playerTitle').textContent = currentBook.name;
+                document.getElementById('playerCover').textContent = themeIcons[currentBook.theme] || '📖';
+                updatePlayButton();
+            }
+        }
+        
+        // Toggle auto play
+        function toggleAutoPlay() {
+            const player = document.getElementById('audioPlayer');
+            
+            if (isPlaying) {
+                player.pause();
+                recordSession();
+                isPlaying = false;
+                autoListenPlaying = false;
+                playStartTime = null;
+                document.getElementById('autoPlayBtn').textContent = '▶';
+            } else {
+                player.play();
+                isPlaying = true;
+                autoListenPlaying = true;
+                playStartTime = Date.now();
+                document.getElementById('autoPlayBtn').textContent = '⏸';
+            }
+            
+            updatePlayButton();
+        }
+        
+        // Stop auto listen
+        function stopAutoListen() {
+            recordSession();
+            
+            const player = document.getElementById('audioPlayer');
+            player.pause();
+            player.src = '';
+            
+            currentBook = null;
+            isPlaying = false;
+            autoListenPlaying = false;
+            autoListenQueue = [];
+            autoListenIndex = 0;
+            
+            document.getElementById('autoListenPlaying').style.display = 'none';
+            document.getElementById('playerBar').classList.remove('show');
+            
+            updateAutoListenUI();
+            updatePlayButton();
+        }
+        
+        // Update today's list
+        function updateTodayList() {
+            updateAutoListenUI();
+            updateStats();
+        }
+        
+        // Render book item
+        function renderBookItem(item, showMark = false) {
+            const book = item.book;
+            const isDone = item.isDone;
+            const isCurrent = currentBook && currentBook.id === book.id;
+            const genreTag = book.genre ? `<span class="tag ${book.genre === '虚构' ? 'tag-fiction' : 'tag-nonfiction'}">${genreIcons[book.genre] || ''} ${book.genre || ''}</span>` : '';
+            
+            let actionBtns = '';
+            if (showMark && !isDone) {
+                actionBtns = `<button class="action-btn" onclick="event.stopPropagation();markDone('${book.id}', ${item.scheduleIndex})" title="标记完成">✓</button>`;
+            }
+            if (isDone) {
+                actionBtns = `<span class="tag tag-done">✓ 已完成</span>`;
+            }
+            
+            return `
+                <div class="book-item ${isCurrent ? 'playing' : ''} ${isDone ? 'done' : ''}" 
+                     onclick="playBook('${book.id}')">
+                    <div class="book-cover">${themeIcons[book.theme] || '📖'}</div>
+                    <div class="book-info">
+                        <div class="book-title">${book.name}</div>
+                        <div class="book-meta">
+                            <span class="tag ${item.isNew ? 'tag-new' : 'tag-review'}">${item.isNew ? '新学' : '复习'}</span>
+                            ${genreTag}
+                            <span class="lexile-badge">📏 ${lexileLabels[book.lexile] || book.lexile}</span>
+                        </div>
+                    </div>
+                    <div class="book-actions">
+                        ${actionBtns}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Update library list
+        function updateLibraryList() {
+            const libraryList = document.getElementById('libraryList');
+            const emptyLibrary = document.getElementById('emptyLibrary');
+            
+            let filtered = books.filter(b => b.audioUrl);
+            
+            // Apply filters
+            if (currentFilter.genre !== 'all') {
+                filtered = filtered.filter(b => b.genre === currentFilter.genre);
+            }
+            if (currentFilter.theme !== 'all') {
+                filtered = filtered.filter(b => b.theme === currentFilter.theme);
+            }
+            if (currentFilter.lexile !== 'all') {
+                filtered = filtered.filter(b => b.lexile === currentFilter.lexile);
+            }
+            if (searchKeyword) {
+                filtered = filtered.filter(b => b.name.toLowerCase().includes(searchKeyword.toLowerCase()));
+            }
+            
+            if (filtered.length === 0) {
+                libraryList.innerHTML = '';
+                emptyLibrary.style.display = 'block';
+            } else {
+                emptyLibrary.style.display = 'none';
+                libraryList.innerHTML = filtered.map(book => {
+                    const genreTag = book.genre ? `<span class="tag ${book.genre === '虚构' ? 'tag-fiction' : 'tag-nonfiction'}">${genreIcons[book.genre] || ''} ${book.genre || ''}</span>` : '';
+                    return `
+                        <div class="book-item" onclick="playBook('${book.id}')">
+                            <div class="book-cover">${themeIcons[book.theme] || '📖'}</div>
+                            <div class="book-info">
+                                <div class="book-title">${book.name}</div>
+                                <div class="book-meta">
+                                    ${genreTag}
+                                    <span>${themeIcons[book.theme] || ''} ${book.theme || '未分类'}</span>
+                                    <span class="lexile-badge">📏 ${lexileLabels[book.lexile] || book.lexile}</span>
+                                </div>
+                            </div>
+                            <div class="book-actions">
+                                <button class="action-btn" onclick="event.stopPropagation();openEdit('${book.id}')" title="编辑">✏️</button>
+                                <button class="action-btn delete" onclick="event.stopPropagation();deleteBook('${book.id}')" title="删除">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            updateFilters();
+        }
+        
+        // Update filter pills
+        function updateFilters() {
+            const genres = ['all', '虚构', '非虚构'];
+            const lexiles = ['all', '预备级', 'L1', 'L2', 'L3', 'L4'];
+            
+            const genreFilters = document.getElementById('genreFilters');
+            const themeFilters = document.getElementById('themeFilters');
+            const lexileFilters = document.getElementById('lexileFilters');
+            
+            genreFilters.innerHTML = genres.map(g => `
+                <button class="filter-pill ${currentFilter.genre === g ? 'active' : ''}" 
+                        onclick="setFilter('genre', '${g}')">
+                    ${g === 'all' ? '全部' : (genreIcons[g] || '') + ' ' + g}
+                </button>
+            `).join('');
+            
+            themeFilters.innerHTML = ['all', ...allThemes].map(t => `
+                <button class="filter-pill ${currentFilter.theme === t ? 'active' : ''}" 
+                        onclick="setFilter('theme', '${t}')">
+                    ${t === 'all' ? '全部' : (themeIcons[t] || '') + ' ' + t}
+                </button>
+            `).join('');
+            
+            lexileFilters.innerHTML = lexiles.map(l => `
+                <button class="filter-pill ${currentFilter.lexile === l ? 'active' : ''}" 
+                        onclick="setFilter('lexile', '${l}')">
+                    ${l === 'all' ? '全部' : lexileLabels[l] || l}
+                </button>
+            `).join('');
+        }
+        
+        // Set filter
+        function setFilter(type, value) {
+            currentFilter[type] = value;
+            updateLibraryList();
+        }
+        
+        // Handle search
+        function handleSearch() {
+            searchKeyword = document.getElementById('searchInput').value.trim();
+            updateLibraryList();
+        }
+        
+        // Handle file select (batch upload)
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 50) {
+                alert('最多只能上传50个文件！');
+                return;
+            }
+            
+            selectedAudioFiles = [];
+            
+            let loadedCount = 0;
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Extract name without extension
+                    let name = file.name.replace(/\.mp3$/i, '').replace(/\.m4a$/i, '').replace(/\.wav$/i, '');
+                    
+                    selectedAudioFiles.push({
+                        name: name,
+                        data: e.target.result,
+                        file: file
+                    });
+                    
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        renderFileList();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Render file list
+        function renderFileList() {
+            const fileListEl = document.getElementById('fileList');
+            
+            if (selectedAudioFiles.length === 0) {
+                fileListEl.style.display = 'none';
+                return;
+            }
+            
+            fileListEl.style.display = 'block';
+            fileListEl.innerHTML = selectedAudioFiles.map((f, idx) => `
+                <div class="file-item">
+                    <span>🎵 ${f.name}</span>
+                    <span class="remove" onclick="removeFile(${idx})">×</span>
+                </div>
+            `).join('');
+        }
+        
+        // Remove file from list
+        function removeFile(index) {
+            selectedAudioFiles.splice(index, 1);
+            renderFileList();
+        }
+        
+        // Select lexile level
+        function selectLexile(element) {
+            document.querySelectorAll('.lexile-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('bookLexile').value = element.dataset.level;
+        }
+        
+        // Add new books (batch)
+        async function addBooks() {
+            if (selectedAudioFiles.length === 0) {
+                alert('请上传音频文件~');
+                return;
+            }
+            
+            const lexile = document.getElementById('bookLexile').value;
+            const genre = document.getElementById('bookGenre').value;
+            const theme = document.getElementById('bookTheme').value;
+            
+            const count = selectedAudioFiles.length;
+            
+            for (const fileData of selectedAudioFiles) {
+                const book = {
+                    id: 'book_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    name: fileData.name,
+                    genre: genre,
+                    theme: theme,
+                    lexile: lexile,
+                    audioUrl: fileData.data,
+                    learnDate: getTodayString(),
+                    createdAt: new Date().toISOString()
+                };
+                books.push(book);
+                
+                // Save audio to IndexedDB
+                const saved = await saveDataWithAudio(book);
+                if (!saved) {
+                    // If save failed, remove the book from array
+                    books = books.filter(b => b.id !== book.id);
+                    await deleteAudioFromDB(book.id);
+                }
+            }
+            
+            // Reset form
+            selectedAudioFiles = [];
+            document.getElementById('fileList').style.display = 'none';
+            document.getElementById('audioFiles').value = '';
+            
+            alert(`成功添加${count}本绘本！🎉`);
+            switchTab('today');
+            updateTodayList();
+        }
+        
+        // Play book
+        function playBook(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (!book || !book.audioUrl) {
+                alert('音频文件不可用');
+                return;
+            }
+            
+            const player = document.getElementById('audioPlayer');
+            
+            // Stop current playback and record session
+            if (currentBook && currentBook.id !== bookId) {
+                recordSession();
+            }
+            
+            currentBook = book;
+            player.src = book.audioUrl;
+            player.play();
+            isPlaying = true;
+            playStartTime = Date.now();
+            
+            document.getElementById('playerBar').classList.add('show');
+            document.getElementById('playerTitle').textContent = book.name;
+            document.getElementById('playerCover').textContent = themeIcons[book.theme] || '📖';
+            
+            updatePlayButton();
+            updateTodayList();
+        }
+        
+        // Toggle play/pause
+        function togglePlay() {
+            const player = document.getElementById('audioPlayer');
+            
+            if (isPlaying) {
+                player.pause();
+                recordSession();
+                isPlaying = false;
+                playStartTime = null;
+            } else {
+                player.play();
+                isPlaying = true;
+                playStartTime = Date.now();
+            }
+            
+            updatePlayButton();
+        }
+        
+        // Update play button
+        function updatePlayButton() {
+            document.getElementById('playerBtn').textContent = isPlaying ? '⏸' : '▶';
+        }
+        
+        // Update player progress
+        function updatePlayerProgress() {
+            const player = document.getElementById('audioPlayer');
+            const progress = document.getElementById('playerProgress');
+            const currentTime = document.getElementById('playerCurrent');
+            const duration = document.getElementById('playerDuration');
+            const playingFill = document.getElementById('playingFill');
+            const playingCurrentTime = document.getElementById('playingCurrentTime');
+            const playingDuration = document.getElementById('playingDuration');
+            
+            if (player.duration) {
+                const percent = (player.currentTime / player.duration) * 100;
+                progress.style.width = percent + '%';
+                currentTime.textContent = formatTime(player.currentTime);
+                duration.textContent = formatTime(player.duration);
+                
+                // Update auto listen UI if active
+                if (playingFill) {
+                    playingFill.style.width = percent + '%';
+                    playingCurrentTime.textContent = formatTime(player.currentTime);
+                    playingDuration.textContent = formatTime(player.duration);
+                }
+            }
+        }
+        
+        // Format time
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Record session
+        function recordSession() {
+            if (!currentBook || !playStartTime) return;
+            
+            const duration = (Date.now() - playStartTime) / 1000 / 60; // minutes
+            
+            if (duration < 0.5) return; // Ignore sessions shorter than 30 seconds
+            
+            // Check if already recorded today
+            const today = getTodayString();
+            const existing = sessions.find(s => 
+                s.bookId === currentBook.id && s.date === today
+            );
+            
+            if (existing) {
+                existing.duration += duration;
+                existing.updatedAt = new Date().toISOString();
+            } else {
+                sessions.push({
+                    id: 'session_' + Date.now(),
+                    bookId: currentBook.id,
+                    date: today,
+                    duration: duration,
+                    scheduleIndex: getCurrentScheduleIndex(),
+                    createdAt: new Date().toISOString()
+                });
+            }
+            
+            saveData();
+            playStartTime = Date.now(); // Reset for continuous play
+            updateStats();
+        }
+        
+        // Get current schedule index
+        function getCurrentScheduleIndex() {
+            if (!currentBook) return 0;
+            const today = getTodayString();
+            const scheduleDates = getScheduleDates(currentBook);
+            const index = scheduleDates.indexOf(today);
+            return index >= 0 ? index : 0;
+        }
+        
+        // Mark as done
+        function markDone(bookId, scheduleIndex) {
+            const today = getTodayString();
+            const existing = sessions.find(s => 
+                s.bookId === bookId && s.date === today && s.scheduleIndex === scheduleIndex
+            );
+            
+            if (!existing) {
+                sessions.push({
+                    id: 'session_' + Date.now(),
+                    bookId: bookId,
+                    date: today,
+                    duration: 0,
+                    scheduleIndex: scheduleIndex,
+                    createdAt: new Date().toISOString()
+                });
+                saveData();
+            }
+            
+            updateTodayList();
+        }
+        
+        // Open edit modal
+        function openEdit(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+            
+            editBookId = bookId;
+            document.getElementById('editName').value = book.name;
+            document.getElementById('editGenre').value = book.genre || '';
+            document.getElementById('editTheme').value = book.theme || '';
+            document.getElementById('editLexile').value = book.lexile || 'L1';
+            document.getElementById('editModal').classList.add('show');
+        }
+        
+        // Close modal
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('show');
+            editBookId = null;
+        }
+        
+        // Save edit
+        function saveEdit() {
+            if (!editBookId) return;
+            
+            const book = books.find(b => b.id === editBookId);
+            if (!book) return;
+            
+            book.name = document.getElementById('editName').value.trim();
+            book.genre = document.getElementById('editGenre').value;
+            book.theme = document.getElementById('editTheme').value;
+            book.lexile = document.getElementById('editLexile').value;
+            
+            saveData();
+            closeModal();
+            updateLibraryList();
+            updateTodayList();
+        }
+        
+        // Delete book
+        async function deleteBook(bookId) {
+            if (!confirm('确定要删除这本绘本吗？')) return;
+            
+            // Delete audio from IndexedDB
+            try {
+                await deleteAudioFromDB(bookId);
+            } catch (e) {
+                console.warn('Failed to delete audio from IndexedDB:', e);
+            }
+            
+            books = books.filter(b => b.id !== bookId);
+            sessions = sessions.filter(s => s.bookId !== bookId);
+            saveData();
+            
+            if (currentBook && currentBook.id === bookId) {
+                stopPlayback();
+            }
+            
+            updateLibraryList();
+            updateTodayList();
+        }
+        
+        // Stop playback
+        function stopPlayback() {
+            const player = document.getElementById('audioPlayer');
+            player.pause();
+            player.src = '';
+            document.getElementById('playerBar').classList.remove('show');
+            currentBook = null;
+            isPlaying = false;
+        }
+        
+        // Switch tab
+        function switchTab(tab) {
+            // Map tab name to page id
+            const pageIdMap = {
+                'today': 'pageToday',
+                'library': 'pageLibrary',
+                'add': 'pageAdd'
+            };
+            
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            const pageId = pageIdMap[tab];
+            if (pageId) {
+                document.getElementById(pageId).classList.add('active');
+            }
+            
+            // Find and activate the nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(n => {
+                if (n.getAttribute('onclick')?.includes(`switchTab('${tab}')`)) {
+                    n.classList.add('active');
+                }
+            });
+            
+            if (tab === 'library') updateLibraryList();
+            if (tab === 'today') updateTodayList();
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const today = getTodayString();
+            const weekAgo = getDateString(6);
+            
+            // Today's duration
+            const todayDuration = sessions
+                .filter(s => s.date === today)
+                .reduce((sum, s) => sum + s.duration, 0);
+            
+            // Week duration
+            const weekDuration = sessions
+                .filter(s => s.date >= weekAgo)
+                .reduce((sum, s) => sum + s.duration, 0);
+            
+            // Total duration
+            const totalDuration = sessions
+                .reduce((sum, s) => sum + s.duration, 0);
+            
+            document.getElementById('statToday').textContent = Math.round(todayDuration);
+            document.getElementById('statWeek').textContent = Math.round(weekDuration);
+            document.getElementById('statTotal').textContent = Math.round(totalDuration);
+            
+            drawWeekChart();
+            drawGenreChart();
+            drawThemeRank();
+        }
+        
+        // Draw week chart
+        function drawWeekChart() {
+            const canvas = document.getElementById('weekChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Get data for last 7 days
+            const days = [];
+            const data = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = getDateString(i);
+                const dayName = ['日', '一', '二', '三', '四', '五', '六'][new Date(date).getDay()];
+                days.push(dayName);
+                
+                const dayTotal = sessions
+                    .filter(s => s.date === date)
+                    .reduce((sum, s) => sum + s.duration, 0);
+                data.push(dayTotal);
+            }
+            
+            const maxVal = Math.max(...data, 30);
+            const barWidth = (width - 60) / 7;
+            const chartHeight = height - 50;
+            
+            // Draw bars
+            data.forEach((val, i) => {
+                const barHeight = (val / maxVal) * chartHeight;
+                const x = 30 + i * barWidth + barWidth * 0.15;
+                const y = chartHeight - barHeight + 20;
+                
+                // Bar gradient
+                const gradient = ctx.createLinearGradient(0, y, 0, chartHeight + 20);
+                gradient.addColorStop(0, '#4CAF50');
+                gradient.addColorStop(1, '#81C784');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(x, y, barWidth * 0.7, barHeight, 8);
+                ctx.fill();
+                
+                // Day label
+                ctx.fillStyle = '#8D6E63';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(days[i], x + barWidth * 0.35, height - 8);
+                
+                // Value label
+                if (val > 0) {
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.fillText(Math.round(val) + '分', x + barWidth * 0.35, y - 5);
+                }
+            });
+        }
+        
+        // Draw genre chart (Fiction vs NonFiction)
+        function drawGenreChart() {
+            const canvas = document.getElementById('genreChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // Count by genre
+            let fictionDuration = 0;
+            let nonFictionDuration = 0;
+            let unclassifiedDuration = 0;
+            
+            sessions.forEach(s => {
+                const book = books.find(b => b.id === s.bookId);
+                if (book) {
+                    if (book.genre === '虚构') {
+                        fictionDuration += s.duration;
+                    } else if (book.genre === '非虚构') {
+                        nonFictionDuration += s.duration;
+                    } else {
+                        unclassifiedDuration += s.duration;
+                    }
+                }
+            });
+            
+            const data = [
+                { label: '虚构 Fiction', value: fictionDuration, color: '#9C27B0' },
+                { label: '非虚构 NonFiction', value: nonFictionDuration, color: '#1976D2' },
+                { label: '未分类', value: unclassifiedDuration, color: '#BDBDBD' }
+            ].filter(d => d.value > 0);
+            
+            if (data.length === 0) {
+                ctx.fillStyle = '#8D6E63';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无数据', width / 2, height / 2);
+                return;
+            }
+            
+            const centerX = width / 2;
+            const centerY = height / 2 - 10;
+            const radius = Math.min(width, height) / 2 - 40;
+            
+            const total = data.reduce((a, b) => a + b.value, 0);
+            let startAngle = -Math.PI / 2;
+            
+            // Draw pie
+            data.forEach((item, i) => {
+                const sliceAngle = (item.value / total) * Math.PI * 2;
+                
+                ctx.fillStyle = item.color;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+                ctx.closePath();
+                ctx.fill();
+                
+                startAngle += sliceAngle;
+            });
+            
+            // Draw legend
+            const legendY = height - 10;
+            const legendStartX = 20;
+            const boxSize = 12;
+            
+            data.forEach((item, i) => {
+                const x = legendStartX + (i % 3) * 110;
+                const y = legendY - Math.floor(i / 3) * 20;
+                
+                ctx.fillStyle = item.color;
+                ctx.fillRect(x, y - boxSize + 2, boxSize, boxSize);
+                
+                ctx.fillStyle = '#5D4037';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'left';
+                const percent = Math.round((item.value / total) * 100);
+                ctx.fillText(`${item.label} ${percent}%`, x + boxSize + 4, y);
+            });
+        }
+        
+        // Draw theme rank (top 3)
+        function drawThemeRank() {
+            const rankEl = document.getElementById('themeRank');
+            
+            // Count by theme
+            const themeCounts = {};
+            sessions.forEach(s => {
+                const book = books.find(b => b.id === s.bookId);
+                if (book && book.theme) {
+                    themeCounts[book.theme] = (themeCounts[book.theme] || 0) + s.duration;
+                }
+            });
+            
+            // Sort and take top 3
+            const sorted = Object.entries(themeCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3);
+            
+            if (sorted.length === 0) {
+                rankEl.innerHTML = '<li class="rank-item"><span style="color:var(--text-light)">暂无数据</span></li>';
+                return;
+            }
+            
+            const medalClass = ['gold', 'silver', 'bronze'];
+            
+            rankEl.innerHTML = sorted.map(([theme, duration], idx) => `
+                <li class="rank-item">
+                    <span class="rank-num ${medalClass[idx]}">${idx + 1}</span>
+                    <div class="rank-info">
+                        <div class="rank-name">${themeIcons[theme] || '📌'} ${theme}</div>
+                        <div class="rank-time">${Math.round(duration)}分钟</div>
+                    </div>
+                </li>
+            `).join('');
+        }
+        
+        // Show celebration
+        function showCelebration() {
+            document.getElementById('celebration').classList.add('show');
+            
+            // Create falling stars
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.textContent = ['⭐', '🌟', '✨', '💫'][Math.floor(Math.random() * 4)];
+                    star.style.left = Math.random() * 100 + 'vw';
+                    star.style.top = '-50px';
+                    document.body.appendChild(star);
+                    
+                    setTimeout(() => star.remove(), 2000);
+                }, i * 100);
+            }
+        }
+        
+        // Close celebration
+        function closeCelebration() {
+            document.getElementById('celebration').classList.remove('show');
+        }
+        
+        // Update current date
+        function updateDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+        }
+        
+        // Audio events
+        document.getElementById('audioPlayer').addEventListener('timeupdate', updatePlayerProgress);
+        
+        document.getElementById('audioPlayer').addEventListener('ended', () => {
+            recordSession();
+            isPlaying = false;
+            updatePlayButton();
+            
+            // Mark as done if there's a schedule for today
+            if (currentBook) {
+                const today = getTodayString();
+                const scheduleDates = getScheduleDates(currentBook);
+                const index = scheduleDates.indexOf(today);
+                
+                if (index >= 0) {
+                    markDone(currentBook.id, index);
+                }
+            }
+            
+            // Auto listen: play next
+            if (autoListenPlaying) {
+                autoListenIndex++;
+                playNextInQueue();
+            }
+        });
+        
+        // Initialize
+        async function init() {
+            await loadData();
+            updateDate();
+            updateTodayList();
+            updateFilters();
+        }
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => {
+                console.log('SW registration failed:', err);
+            });
+        }
+        
+        init();
+    </script>
+</body>
+</html>

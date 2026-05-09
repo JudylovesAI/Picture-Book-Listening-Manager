@@ -1,0 +1,22 @@
+{
+  "name": "绘本熏听管家",
+  "short_name": "熏听管家",
+  "description": "按艾宾浩斯记忆曲线安排绘本熏听，统计时长，按主题蓝思值分类",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFF8E7",
+  "theme_color": "#4CAF50",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
