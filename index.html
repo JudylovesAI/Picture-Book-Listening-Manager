@@ -1538,19 +1538,6 @@
             }
         }
         
-        async function ghFetch(path, options = {}) {
-            const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
-                ...options,
-                headers: {
-                    'Authorization': `Bearer ${GH.token}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    ...options.headers
-                }
-            });
-            if (resp.status === 404) return null;
-            if (!resp.ok) throw new Error(`GitHub API ${resp.status}: ${resp.statusText}`);
-            return resp.json();
-        }
         
         function utf8ToBase64(str) {
             return btoa(unescape(encodeURIComponent(str)));
@@ -1559,20 +1546,31 @@
         function base64ToUtf8(b64) {
             return decodeURIComponent(escape(atob(b64)));
         }
-        
-        // Pull cloud data and merge with local
         async function syncFromCloud() {
             try {
                 syncStatus = 'syncing';
                 updateSyncUI();
                 
-                const data = await ghFetch('data/books.json');
-                if (!data) {
+                const response = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/data/books.json`, {
+                    headers: {
+                        'Authorization': `Bearer ${GH.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (response.status === 404) {
+                    // No cloud data yet, that's fine
                     syncStatus = 'synced';
+                    lastSyncTime = new Date().toLocaleTimeString('zh-CN');
                     updateSyncUI();
                     return;
                 }
                 
+                if (!response.ok) {
+                    throw new Error(`GitHub API ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
                 booksJsonSha = data.sha;
                 const cloud = JSON.parse(base64ToUtf8(data.content));
                 const cloudBooks = cloud.books || [];
@@ -1644,11 +1642,20 @@
                     content: content
                 };
                 
-                // Get latest sha first
-                const current = await ghFetch('data/books.json');
-                if (current) {
-                    booksJsonSha = current.sha;
-                    body.sha = booksJsonSha;
+                // Get latest sha first (needed for update)
+                try {
+                    const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/data/books.json`, {
+                        headers: {
+                            'Authorization': `Bearer ${GH.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        body.sha = data.sha;
+                    }
+                } catch (e) {
+                    // File doesn't exist yet, that's fine - create new
                 }
                 
                 const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/data/books.json`, {
@@ -1662,8 +1669,8 @@
                 });
                 
                 if (!resp.ok) {
-                    const errData = await resp.json();
-                    throw new Error(errData.message || resp.statusText);
+                    const errData = await resp.json().catch(() => ({}));
+                    throw new Error(errData.message || `HTTP ${resp.status}`);
                 }
                 
                 const result = await resp.json();
@@ -1686,16 +1693,24 @@
                 const base64Content = audioBase64Data.split(',')[1] || audioBase64Data;
                 const path = `data/audio/${bookId}.mp3`;
                 
-                // Check if file already exists
-                const existing = await ghFetch(path);
-                
                 const body = {
                     message: `Add audio: ${bookId}`,
                     content: base64Content
                 };
-                if (existing) {
-                    body.sha = existing.sha;
-                }
+                
+                // Check if file already exists to get sha
+                try {
+                    const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+                        headers: {
+                            'Authorization': `Bearer ${GH.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        body.sha = data.sha;
+                    }
+                } catch (e) {}
                 
                 const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
                     method: 'PUT',
@@ -1708,8 +1723,8 @@
                 });
                 
                 if (!resp.ok) {
-                    const errData = await resp.json();
-                    throw new Error(errData.message || resp.statusText);
+                    const errData = await resp.json().catch(() => ({}));
+                    console.warn('Audio upload failed:', errData.message);
                 }
             } catch (e) {
                 console.warn('Audio upload failed:', e);
@@ -1720,10 +1735,16 @@
         async function deleteAudioFromCloud(bookId) {
             try {
                 const path = `data/audio/${bookId}.mp3`;
-                const existing = await ghFetch(path);
-                if (!existing) return;
-                
                 const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+                    headers: {
+                        'Authorization': `Bearer ${GH.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                if (!resp.ok) return;
+                
+                const data = await resp.json();
+                await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${GH.token}`,
@@ -1732,7 +1753,7 @@
                     },
                     body: JSON.stringify({
                         message: `Delete audio: ${bookId}`,
-                        sha: existing.sha
+                        sha: data.sha
                     })
                 });
             } catch (e) {
@@ -1745,7 +1766,10 @@
             try {
                 const path = `data/audio/${bookId}.mp3`;
                 const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
-                    headers: { 'Authorization': `Bearer ${GH.token}` }
+                    headers: {
+                        'Authorization': `Bearer ${GH.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 });
                 if (!resp.ok) return null;
                 const data = await resp.json();
