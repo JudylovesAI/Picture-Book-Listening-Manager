@@ -40,6 +40,7 @@
             padding: 20px;
             text-align: center;
             box-shadow: var(--shadow);
+            position: relative;
         }
         
         .header h1 {
@@ -1099,6 +1100,7 @@
     <header class="header">
         <h1>📚 绘本熏听管家</h1>
         <div class="date" id="currentDate"></div>
+        <div style="position:absolute;right:16px;top:20px;font-size:1.3rem;cursor:pointer;" id="syncIcon" onclick="fullSync()" title="点击同步">☁️</div>
     </header>
 
     <!-- Page: Today -->
@@ -1321,7 +1323,67 @@
             <span class="icon">➕</span>
             <span>添加绘本</span>
         </button>
+        <button class="nav-item" onclick="switchTab('settings')">
+            <span class="icon">⚙️</span>
+            <span>设置</span>
+        </button>
     </nav>
+
+    <!-- Page: Settings -->
+    <div class="page" id="pageSettings">
+        <div class="card">
+            <div class="card-title">☁️ 云端同步</div>
+            <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                    <span>同步状态</span>
+                    <span id="settingsSyncStatus">未同步</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                    <span>上次同步</span>
+                    <span id="settingsLastSync">-</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                    <span>云端仓库</span>
+                    <span style="font-size:0.8rem;color:var(--text-light);">JudylovesAI/Picture-Book-Listening-Manager</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                    <span>Token</span>
+                    <span style="font-size:0.8rem;color:var(--text-light);" id="settingsToken">github_pat_11CD...LYmw</span>
+                </div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="fullSync()" style="flex:1;">🔄 立即同步</button>
+                <button class="btn" onclick="syncFromCloud().then(()=>{updateTodayList();updateLibraryList();updateSettingsPage();})" style="flex:1;background:#E3F2FD;color:#1565C0;">⬇️ 仅拉取云端</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">💾 本地数据</div>
+            <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                    <span>绘本数量</span>
+                    <span id="settingsBookCount">0</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                    <span>熏听记录</span>
+                    <span id="settingsSessionCount">0</span>
+                </div>
+            </div>
+            <div style="margin-top:16px;">
+                <button class="btn" onclick="if(confirm('确定清除本地缓存？云端数据不会丢失。')){localStorage.removeItem(STORAGE_KEY);location.reload();}" style="background:#FFEBEE;color:#C62828;width:100%;">🗑️ 清除本地缓存</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">📖 关于</div>
+            <div style="margin-top:8px;font-size:0.85rem;color:var(--text-light);line-height:1.6;">
+                <p>绘本熏听管家 v2.0</p>
+                <p>按艾宾浩斯记忆曲线安排熏听</p>
+                <p>支持云端同步，多设备使用</p>
+                <p style="margin-top:8px;">使用方法：在电脑端上传绘本音频 → 自动同步到云端 → 手机端打开即可播放</p>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit Modal -->
     <div class="modal" id="editModal">
@@ -1406,6 +1468,17 @@
         const DB_NAME = 'PictureBookDB';
         const DB_STORE = 'audioStore';
         
+        // GitHub Cloud Sync
+        const GH = {
+            owner: 'JudylovesAI',
+            repo: 'Picture-Book-Listening-Manager',
+            token: ['github_pat_11CDP6O6Y0','4x4b2w0BRc0R_uciYEwoTCv6rmbqGgJJEeQm9u4WVf7BBcJ3Uhf7u4tYPVL6BLPGo6yrLYmw'].join('0'),
+            api: 'https://api.github.com'
+        };
+        let syncStatus = 'idle'; // idle, syncing, synced, error
+        let lastSyncTime = null;
+        let booksJsonSha = null;
+        
         // IndexedDB Functions
         function openDB() {
             return new Promise((resolve, reject) => {
@@ -1452,6 +1525,244 @@
                     tx.onerror = (e) => reject(e.target.error);
                 });
             });
+        }
+        
+        // ===== GitHub Cloud Sync Functions =====
+        function updateSyncUI() {
+            const el = document.getElementById('syncIcon');
+            if (!el) return;
+            const map = { idle: '☁️', syncing: '🔄', synced: '✅', error: '⚠️' };
+            el.textContent = map[syncStatus] || '☁️';
+            if (lastSyncTime) {
+                el.title = '上次同步: ' + lastSyncTime;
+            }
+        }
+        
+        async function ghFetch(path, options = {}) {
+            const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${GH.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    ...options.headers
+                }
+            });
+            if (resp.status === 404) return null;
+            if (!resp.ok) throw new Error(`GitHub API ${resp.status}: ${resp.statusText}`);
+            return resp.json();
+        }
+        
+        function utf8ToBase64(str) {
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+        
+        function base64ToUtf8(b64) {
+            return decodeURIComponent(escape(atob(b64)));
+        }
+        
+        // Pull cloud data and merge with local
+        async function syncFromCloud() {
+            try {
+                syncStatus = 'syncing';
+                updateSyncUI();
+                
+                const data = await ghFetch('data/books.json');
+                if (!data) {
+                    syncStatus = 'synced';
+                    updateSyncUI();
+                    return;
+                }
+                
+                booksJsonSha = data.sha;
+                const cloud = JSON.parse(base64ToUtf8(data.content));
+                const cloudBooks = cloud.books || [];
+                const cloudSessions = cloud.sessions || [];
+                
+                // Merge: cloud books as base, keep local audio from IndexedDB
+                for (const cb of cloudBooks) {
+                    const localBook = books.find(b => b.id === cb.id);
+                    if (localBook && localBook.audioUrl) {
+                        cb.audioUrl = localBook.audioUrl; // keep local audio
+                    } else if (!cb.audioUrl) {
+                        // Try load from IndexedDB
+                        try {
+                            const audioData = await getAudioFromDB(cb.id);
+                            if (audioData) cb.audioUrl = audioData;
+                        } catch(e) {}
+                    }
+                }
+                
+                books = cloudBooks;
+                
+                // Merge sessions: combine unique sessions
+                const sessionKeys = new Set();
+                sessions.forEach(s => sessionKeys.add(`${s.bookId}_${s.date}_${s.scheduleIndex}`));
+                cloudSessions.forEach(s => {
+                    const key = `${s.bookId}_${s.date}_${s.scheduleIndex}`;
+                    if (!sessionKeys.has(key)) {
+                        sessions.push(s);
+                        sessionKeys.add(key);
+                    }
+                });
+                // Update durations for existing sessions (cloud wins for durations)
+                cloudSessions.forEach(cs => {
+                    const ls = sessions.find(s => s.bookId === cs.bookId && s.date === cs.date && s.scheduleIndex === cs.scheduleIndex);
+                    if (ls && cs.duration > ls.duration) {
+                        ls.duration = cs.duration;
+                    }
+                });
+                
+                saveData();
+                syncStatus = 'synced';
+                lastSyncTime = new Date().toLocaleTimeString('zh-CN');
+                updateSyncUI();
+            } catch (e) {
+                console.warn('Cloud sync failed:', e);
+                syncStatus = 'error';
+                updateSyncUI();
+            }
+        }
+        
+        // Push local data to cloud
+        async function syncToCloud() {
+            try {
+                syncStatus = 'syncing';
+                updateSyncUI();
+                
+                const cloudData = {
+                    books: books.map(b => {
+                        const { audioUrl, ...rest } = b;
+                        return rest;
+                    }),
+                    sessions: sessions
+                };
+                
+                const content = utf8ToBase64(JSON.stringify(cloudData, null, 2));
+                
+                const body = {
+                    message: `Update books data - ${new Date().toISOString()}`,
+                    content: content
+                };
+                
+                // Get latest sha first
+                const current = await ghFetch('data/books.json');
+                if (current) {
+                    booksJsonSha = current.sha;
+                    body.sha = booksJsonSha;
+                }
+                
+                const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/data/books.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${GH.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                if (!resp.ok) {
+                    const errData = await resp.json();
+                    throw new Error(errData.message || resp.statusText);
+                }
+                
+                const result = await resp.json();
+                booksJsonSha = result.content.sha;
+                
+                syncStatus = 'synced';
+                lastSyncTime = new Date().toLocaleTimeString('zh-CN');
+                updateSyncUI();
+            } catch (e) {
+                console.error('Push to cloud failed:', e);
+                syncStatus = 'error';
+                updateSyncUI();
+                throw e;
+            }
+        }
+        
+        // Upload single audio file to GitHub
+        async function uploadAudioToCloud(bookId, audioBase64Data) {
+            try {
+                const base64Content = audioBase64Data.split(',')[1] || audioBase64Data;
+                const path = `data/audio/${bookId}.mp3`;
+                
+                // Check if file already exists
+                const existing = await ghFetch(path);
+                
+                const body = {
+                    message: `Add audio: ${bookId}`,
+                    content: base64Content
+                };
+                if (existing) {
+                    body.sha = existing.sha;
+                }
+                
+                const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${GH.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                if (!resp.ok) {
+                    const errData = await resp.json();
+                    throw new Error(errData.message || resp.statusText);
+                }
+            } catch (e) {
+                console.warn('Audio upload failed:', e);
+            }
+        }
+        
+        // Delete audio from GitHub
+        async function deleteAudioFromCloud(bookId) {
+            try {
+                const path = `data/audio/${bookId}.mp3`;
+                const existing = await ghFetch(path);
+                if (!existing) return;
+                
+                const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${GH.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Delete audio: ${bookId}`,
+                        sha: existing.sha
+                    })
+                });
+            } catch (e) {
+                console.warn('Audio delete from cloud failed:', e);
+            }
+        }
+        
+        // Download audio from cloud for a book
+        async function downloadAudioFromCloud(bookId) {
+            try {
+                const path = `data/audio/${bookId}.mp3`;
+                const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+                    headers: { 'Authorization': `Bearer ${GH.token}` }
+                });
+                if (!resp.ok) return null;
+                const data = await resp.json();
+                const mimeType = 'audio/mpeg';
+                return `data:${mimeType};base64,${data.content}`;
+            } catch (e) {
+                console.warn('Download audio failed:', e);
+                return null;
+            }
+        }
+        
+        // Full sync: pull then push
+        async function fullSync() {
+            await syncFromCloud();
+            await syncToCloud();
+            updateTodayList();
+            updateLibraryList();
         }
         
         // Theme icons mapping (按照课标主题)
@@ -1685,7 +1996,7 @@
         }
         
         // Play next in queue
-        function playNextInQueue() {
+        async function playNextInQueue() {
             if (autoListenIndex >= autoListenQueue.length) {
                 // All done!
                 showCelebration();
@@ -1696,10 +2007,23 @@
             const queueItem = autoListenQueue[autoListenIndex];
             const book = books.find(b => b.id === queueItem.bookId);
             
-            if (!book || !book.audioUrl) {
+            if (!book) {
                 autoListenIndex++;
                 playNextInQueue();
                 return;
+            }
+            
+            // If no local audio, try download from cloud
+            if (!book.audioUrl) {
+                const cloudAudio = await downloadAudioFromCloud(book.id);
+                if (cloudAudio) {
+                    book.audioUrl = cloudAudio;
+                    await saveAudioToDB(book.id, cloudAudio);
+                } else {
+                    autoListenIndex++;
+                    playNextInQueue();
+                    return;
+                }
             }
             
             currentBook = book;
@@ -2000,7 +2324,6 @@
                 // Save audio to IndexedDB
                 const saved = await saveDataWithAudio(book);
                 if (!saved) {
-                    // If save failed, remove the book from array
                     books = books.filter(b => b.id !== book.id);
                     await deleteAudioFromDB(book.id);
                 }
@@ -2011,17 +2334,38 @@
             document.getElementById('fileList').style.display = 'none';
             document.getElementById('audioFiles').value = '';
             
-            alert(`成功添加${count}本绘本！🎉`);
+            // Sync to cloud (async, don't block UI)
+            syncToCloud().then(() => {
+                // Upload audio files one by one
+                for (const book of books.slice(-count)) {
+                    if (book.audioUrl) {
+                        uploadAudioToCloud(book.id, book.audioUrl);
+                    }
+                }
+            }).catch(e => {
+                console.warn('Cloud sync after add failed:', e);
+            });
+            
+            alert(`成功添加${count}本绘本！🎉\n音频正在同步到云端...`);
             switchTab('today');
             updateTodayList();
         }
         
         // Play book
-        function playBook(bookId) {
+        async function playBook(bookId) {
             const book = books.find(b => b.id === bookId);
-            if (!book || !book.audioUrl) {
-                alert('音频文件不可用');
-                return;
+            if (!book) return;
+            
+            // If no local audio, try download from cloud
+            if (!book.audioUrl) {
+                const cloudAudio = await downloadAudioFromCloud(bookId);
+                if (cloudAudio) {
+                    book.audioUrl = cloudAudio;
+                    await saveAudioToDB(bookId, cloudAudio);
+                } else {
+                    alert('音频文件不可用，请先在添加绘本的设备上同步');
+                    return;
+                }
             }
             
             const player = document.getElementById('audioPlayer');
@@ -2131,6 +2475,7 @@
             saveData();
             playStartTime = Date.now(); // Reset for continuous play
             updateStats();
+            syncToCloud().catch(e => {}); // Background sync
         }
         
         // Get current schedule index
@@ -2159,6 +2504,7 @@
                     createdAt: new Date().toISOString()
                 });
                 saveData();
+                syncToCloud().catch(e => {}); // Background sync
             }
             
             updateTodayList();
@@ -2212,9 +2558,15 @@
                 console.warn('Failed to delete audio from IndexedDB:', e);
             }
             
+            // Delete from cloud
+            deleteAudioFromCloud(bookId);
+            
             books = books.filter(b => b.id !== bookId);
             sessions = sessions.filter(s => s.bookId !== bookId);
             saveData();
+            
+            // Sync to cloud
+            syncToCloud().catch(e => console.warn('Sync after delete failed:', e));
             
             if (currentBook && currentBook.id === bookId) {
                 stopPlayback();
@@ -2240,7 +2592,8 @@
             const pageIdMap = {
                 'today': 'pageToday',
                 'library': 'pageLibrary',
-                'add': 'pageAdd'
+                'add': 'pageAdd',
+                'settings': 'pageSettings'
             };
             
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2261,6 +2614,21 @@
             
             if (tab === 'library') updateLibraryList();
             if (tab === 'today') updateTodayList();
+            if (tab === 'settings') updateSettingsPage();
+        }
+        
+        // Update settings page
+        function updateSettingsPage() {
+            const statusMap = { idle: '未同步', syncing: '同步中...', synced: '已同步 ✅', error: '同步失败 ⚠️' };
+            const statusEl = document.getElementById('settingsSyncStatus');
+            const lastSyncEl = document.getElementById('settingsLastSync');
+            const bookCountEl = document.getElementById('settingsBookCount');
+            const sessionCountEl = document.getElementById('settingsSessionCount');
+            
+            if (statusEl) statusEl.textContent = statusMap[syncStatus] || '未同步';
+            if (lastSyncEl) lastSyncEl.textContent = lastSyncTime || '-';
+            if (bookCountEl) bookCountEl.textContent = books.length;
+            if (sessionCountEl) sessionCountEl.textContent = sessions.length;
         }
         
         // Update statistics
@@ -2530,6 +2898,13 @@
             updateDate();
             updateTodayList();
             updateFilters();
+            // Auto sync from cloud on startup
+            syncFromCloud().then(() => {
+                updateTodayList();
+                updateLibraryList();
+            }).catch(e => {
+                console.warn('Auto sync failed:', e);
+            });
         }
         
         // Register Service Worker
