@@ -61,6 +61,14 @@
       "duration": 2.35525,
       "scheduleIndex": 0,
       "createdAt": "2026-05-09T09:50:03.364Z"
+    },
+    {
+      "id": "session_1778320725007",
+      "bookId": "book_1778320582424_m4qcxvkjj",
+      "date": "2026-05-09",
+      "duration": 2.2637,
+      "scheduleIndex": 0,
+      "createdAt": "2026-05-09T09:58:45.007Z"
     }
   ]
 }
