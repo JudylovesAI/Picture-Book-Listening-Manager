@@ -1761,8 +1761,23 @@
             }
         }
         
-        // Download audio from cloud for a book
+        // Get audio URL from cloud (use raw URL for direct streaming)
+        function getCloudAudioUrl(bookId) {
+            return `https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/main/data/audio/${bookId}.mp3`;
+        }
+        
+        // Download audio from cloud for a book (fallback: try raw URL first)
         async function downloadAudioFromCloud(bookId) {
+            // For large files, GitHub Contents API doesn't return content
+            // So we use the raw URL directly as audio src
+            const rawUrl = getCloudAudioUrl(bookId);
+            try {
+                // Test if the file exists with a HEAD request
+                const resp = await fetch(rawUrl, { method: 'HEAD' });
+                if (resp.ok) return rawUrl;
+            } catch (e) {}
+            
+            // Fallback: try Contents API for small files
             try {
                 const path = `data/audio/${bookId}.mp3`;
                 const resp = await fetch(`${GH.api}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
@@ -1773,12 +1788,12 @@
                 });
                 if (!resp.ok) return null;
                 const data = await resp.json();
-                const mimeType = 'audio/mpeg';
-                return `data:${mimeType};base64,${data.content}`;
-            } catch (e) {
-                console.warn('Download audio failed:', e);
-                return null;
-            }
+                if (data.content && data.encoding === 'base64') {
+                    return `data:audio/mpeg;base64,${data.content}`;
+                }
+            } catch (e) {}
+            
+            return null;
         }
         
         // Full sync: pull then push
@@ -2037,12 +2052,14 @@
                 return;
             }
             
-            // If no local audio, try download from cloud
+            // If no local audio, try cloud
             if (!book.audioUrl) {
                 const cloudAudio = await downloadAudioFromCloud(book.id);
                 if (cloudAudio) {
                     book.audioUrl = cloudAudio;
-                    await saveAudioToDB(book.id, cloudAudio);
+                    if (cloudAudio.startsWith('data:')) {
+                        await saveAudioToDB(book.id, cloudAudio);
+                    }
                 } else {
                     autoListenIndex++;
                     playNextInQueue();
@@ -2380,12 +2397,16 @@
             const book = books.find(b => b.id === bookId);
             if (!book) return;
             
-            // If no local audio, try download from cloud
+            // If no local audio, try cloud
             if (!book.audioUrl) {
                 const cloudAudio = await downloadAudioFromCloud(bookId);
                 if (cloudAudio) {
                     book.audioUrl = cloudAudio;
-                    await saveAudioToDB(bookId, cloudAudio);
+                    // Only save to IndexedDB if it's base64 data (small files)
+                    // Raw URLs don't need caching - browser handles them
+                    if (cloudAudio.startsWith('data:')) {
+                        await saveAudioToDB(bookId, cloudAudio);
+                    }
                 } else {
                     alert('音频文件不可用，请先在添加绘本的设备上同步');
                     return;
