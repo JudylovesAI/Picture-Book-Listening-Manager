@@ -35,6 +35,15 @@
       "lexile": "L2",
       "learnDate": "2026-05-09",
       "createdAt": "2026-05-09T09:56:22.424Z"
+    },
+    {
+      "id": "book_1778321769258_kn9j33oiy",
+      "name": "10. Rebecca at the Funfair-大猫 三级2",
+      "genre": "虚构",
+      "theme": "社会与文化",
+      "lexile": "L1",
+      "learnDate": "2026-05-09",
+      "createdAt": "2026-05-09T10:16:09.258Z"
     }
   ],
   "sessions": [
